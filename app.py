@@ -30,7 +30,7 @@ st.markdown("""
 
 
 if "go" in st.query_params and st.query_params["go"] == "method":
-    st.switch_page("pages\details_methode.py")
+    st.switch_page("pages/details_methode.py")
     
     
 st.markdown("""
