@@ -147,10 +147,11 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
     class PDF(FPDF):
         def __init__(self):
             super().__init__()
-            self.add_font("DejaVu", "", "assets\\fonts\\DejaVu\\DejaVuSans.ttf", uni=True)
-            self.add_font("DejaVu", "B", "assets\\fonts\\DejaVu\\DejaVuSans-Bold.ttf", uni=True)
-            self.add_font("DejaVu", "I", "assets\\fonts\\DejaVu\\DejaVuSans-Oblique.ttf", uni=True)
-            self.add_font("DejaVu", "BI", "assets\\fonts\\DejaVu\\DejaVuSans-BoldOblique.ttf", uni=True)
+            self.add_font("DejaVu", "", "assets/fonts/DejaVu/DejaVuSans.ttf", uni=True)
+            self.add_font("DejaVu", "B", "assets/fonts/DejaVu/DejaVuSans-Bold.ttf", uni=True)
+            self.add_font("DejaVu", "I", "assets/fonts/DejaVu/DejaVuSans-Oblique.ttf", uni=True)
+            self.add_font("DejaVu", "BI", "assets/fonts/DejaVu/DejaVuSans-BoldOblique.ttf", uni=True)
+
 
             self.title = ""
             self.current_chapter_title = ""
