@@ -1,9 +1,4 @@
-/* ===========================================
-   STYLES POUR L'APPLICATION STREAMLIT
-   Analyse d'objectifs pédagogiques
-   =========================================== */
 
-/* En-tête principal */
 .main-header {
     background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
     padding: 2rem;
@@ -11,23 +6,10 @@
     color: white;
     text-align: center;
     margin-bottom: 2rem;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-.main-header h1 {
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-}
-
-.main-header p {
-    margin-bottom: 0;
-    opacity: 0.9;
-    font-size: 1.1rem;
-}
-
-/* Boîte de synthèse */
 .synthese-box {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background-color:  #c3cfe241;
     padding: 1.5rem;
     border-radius: 10px;
     border-left: 5px solid #667eea;
@@ -35,18 +17,6 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.synthese-box h4 {
-    margin-top: 0;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.synthese-box p {
-    color: #34495e;
-    line-height: 1.6;
-}
-
-/* Section de rapport */
 .rapport-section {
     background: #ffffff;
     padding: 1.5rem;
@@ -54,10 +24,8 @@
     border: 1px solid #e1e8ed;
     margin: 1rem 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    line-height: 1.6;
 }
 
-/* Cartes de métriques */
 .metric-card {
     background: white;
     padding: 1rem;
@@ -65,139 +33,24 @@
     border-left: 4px solid #4CAF50;
     margin: 0.5rem 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
 }
 
-.metric-card:hover {
-    transform: translateY(-2px);
-}
-
-/* Banner d'information */
 .info-banner {
-    background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+    background-color:#ff6b6b33;
     padding: 1rem;
     border-radius: 8px;
     border-left: 4px solid #ff6b6b;
     margin: 1rem 0;
 }
 
-.info-banner h4 {
-    margin-top: 0;
-    color: #8b1538;
-    font-weight: 600;
-}
-
-.info-banner p {
-    color: #5a1a2a;
-    margin-bottom: 0;
-}
-
-/* Section de téléchargement */
 .download-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 1.5rem;
     border-radius: 10px;
     text-align: center;
     margin: 2rem 0;
-    color: white;
 }
 
-/* Styles pour les onglets */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-}
-
-.stTabs [data-baseweb="tab"] {
-    height: 50px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 0 16px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.stTabs [aria-selected="true"] {
-    background-color: #667eea !important;
-    color: white !important;
-}
-
-/* Amélioration des boutons */
-.stButton > button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-/* Amélioration des métriques Streamlit */
-.metric-container {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-left: 4px solid #667eea;
-}
-
-/* Amélioration des formulaires */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea {
-    border-radius: 8px;
-    border: 2px solid #e1e8ed;
-    transition: border-color 0.2s ease;
-}
-
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-}
-
-/* Amélioration des alertes */
-.stAlert {
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Animations douces */
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.synthese-box,
-.rapport-section,
-.info-banner {
-    animation: slideIn 0.5s ease-out;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .main-header {
-        padding: 1.5rem 1rem;
-    }
-    
-    .synthese-box,
-    .rapport-section {
-        padding: 1rem;
-        margin: 0.5rem 0;
-    }
-    
-    .main-header h1 {
-        font-size: 1.5rem;
-    }
+.resultats-section {
+    font-size: medium;
 }
