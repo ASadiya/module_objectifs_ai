@@ -1,12 +1,5 @@
-streamlit 
-logging
+streamlit
 mistralai
 dotenv
-#os
-re 
-ast 
-json 
-fpdf2 == 2.8.3
-tempfile
-datetime
+fpdf2==2.8.3
 blinder
