@@ -1,0 +1,56 @@
+
+.main-header {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.synthese-box {
+    background-color:  #c3cfe241;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border-left: 5px solid #667eea;
+    margin: 1rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.rapport-section {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #e1e8ed;
+    margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.metric-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
+    margin: 0.5rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.info-banner {
+    background-color:#ff6b6b33;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #ff6b6b;
+    margin: 1rem 0;
+}
+
+.download-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.resultats-section {
+    font-size: medium;
+}
