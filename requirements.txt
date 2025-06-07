@@ -2,11 +2,11 @@ streamlit
 logging
 mistralai
 dotenv
-os
+#os
 re 
 ast 
 json 
 fpdf2 == 2.8.3
 tempfile
 datetime
-
+blinder
