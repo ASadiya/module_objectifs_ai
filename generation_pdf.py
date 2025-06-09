@@ -3,7 +3,7 @@ import streamlit as st
 from fpdf import FPDF
 import tempfile
 from datetime import datetime
-
+from babel.dates import format_date
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,29 @@ def llm_output_to_dict(llm_output):
     logger.error("Toutes les méthodes de conversion ont échoué")
     raise ValueError("Impossible de convertir la sortie LLM en dictionnaire")
 
+# Fonction similaire pour facilité l'affichage des détails du rapport 
+
+def nettoyer_sortie_llm(texte: str) -> str:
+    """
+    Nettoie la sortie d'un LLM en supprimant les balises Markdown de type ```...```.
+    Conserve uniquement le contenu utile à afficher dans du HTML.
+    """
+    texte = texte.strip()
+    logger.debug(f"Texte brut, longueur: {len(texte)}")
+
+    # Supprimer les blocs ```...``` (avec ou sans langage précisé)
+    blocs = re.findall(r"```(?:\w+)?\\n(.*?)```", texte, re.DOTALL)
+    if blocs:
+        logger.debug(f"{len(blocs)} bloc(s) détecté(s) et extrait(s).")
+        texte_nettoye = "\n\n".join(blocs)
+    else:
+        # Pas de bloc markdown trouvé, on retire les délimiteurs bruts s'ils traînent
+        texte_nettoye = texte.replace("```", "")
+        logger.debug("Pas de bloc markdown structuré trouvé, suppression simple des backticks.")
+
+    return texte_nettoye.strip()
+
+
 def build_tables_from_recap_dict(recap_dict):
     table_chif = [('Élément analysé ', 'Nombre')]
     table_chif.append(("Objectifs saisis", str(recap_dict.get('objectifs_total', 00))))
@@ -158,6 +181,8 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.is_chapter_start = False
             self.is_page_de_garde = False
 
+            self.is_annexe = False 
+            
             self.table_counter = 1
             
             self.set_auto_page_break(auto=True, margin=15)
@@ -309,10 +334,16 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.set_text_color(25, 25, 112)
             self.set_draw_color(70, 130, 180)
             self.set_line_width(0.5)
+            
+            if getattr(self, "is_annexe", True):
+                chapter_label = "Annexe"
+            else:
+                chapter_label = "Chapitre"
+            
             self.cell(
                 0,
                 18,
-                f"   Chapitre {num} : {label}",
+                f"   {chapter_label} {num} : {label}",
                 border="B",
                 ln=True,
                 align="L",
@@ -349,11 +380,16 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.set_xy(right_margin - 70, y)  
             
             self.set_text_color(25, 25, 112)
-
+            
+            if getattr(self, "is_annexe", True):
+                chapter_label = "Annexe"
+            else:
+                chapter_label = "Chapitre"
+                
             self.cell(
                 70,
                 8,
-                f"Chapitre : {self.current_chapter_title}",
+                f"chapter_label : {self.current_chapter_title}",
                 border="B",
                 ln=True,
                 align="R"
@@ -392,6 +428,32 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             if date:
                 self.cell(0, 10, f"Date : {date}", ln=True, align='C')
 
+        def add_disclaimer(self):
+            self.is_page_de_garde = True
+            self.add_page()
+            
+            # Encadré stylisé
+            pdf.set_fill_color(240, 240, 255)  # Fond très léger (bleuté)
+            pdf.set_draw_color(25, 25, 112)    # Bordure = couleur d'accent
+            pdf.set_line_width(0.5)
+            pdf.rect(x=10, y=30, w=190, h=70, style='D')  # Dessiner le cadre
+            
+            # Titre du disclaimer
+            pdf.set_xy(10, 35)
+            pdf.set_font("DejaVu", 'B', 14)
+            pdf.set_text_color(25, 25, 112)  # Couleur d'accent
+            pdf.cell(0, 10, "DISCLAIMER – Contenu généré par IA", ln=True, align="C")
+
+            # Corps du texte
+            pdf.set_xy(15, 50)
+            pdf.set_font("Helvetica", size=12)
+            pdf.set_text_color(0)  # Noir
+            pdf.multi_cell(180, 8,
+                """Ces recommandations sont générées automatiquement par un système d'intelligence artificielle.
+
+            Elles visent à guider, non à remplacer l'expertise pédagogique humaine, et doivent être examinées avec discernement avant toute utilisation.""")
+
+            
         # Constitution du chapitre récapitulatif
         
         def add_recap_tables(self, table_chif, table_axes, table_recom, table_ameliorer, table_conformes):
@@ -472,6 +534,89 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.cell(3)
             self.multi_cell(0, 7, objectifs_specifiques_brut, align='J')
 
+        def add_methode_analyse(self):
+            self.is_annexe = True
+            self.current_chapter_title = "Méthode d’analyse"
+            self.is_page_de_garde = False
+            self.is_chapter_start = True
+            self.add_page()
+            self.chapter_title(5, "Méthode d’analyse utilisée")
+
+            self.set_font("DejaVu", "", 11)
+            self.multi_cell(0, 8, 
+                "Notre assistant intelligent procède à une analyse en plusieurs étapes pour évaluer et améliorer vos objectifs pédagogiques :",
+                align="J")
+            self.ln(6)
+
+            # Étape 1
+            self.set_font("DejaVu", "B", 12)
+            self.set_text_color(25, 25, 112)
+            self.cell(0, 8, "1. Classification selon la taxonomie de Bloom", ln=True)
+            self.set_font("DejaVu", "", 11)
+            self.set_text_color(0, 0, 0)
+            self.multi_cell(0, 8,
+                "Une fiche explicative et une base de données regroupant des verbes d’action classés selon les six niveaux hiérarchiques de la taxonomie de Bloom permettent de catégoriser chaque objectif pédagogique :",
+                align="J")
+            self.ln(2)
+            niveaux = ["- Connaître", "- Comprendre", "- Appliquer", "- Analyser", "- Évaluer", "- Créer"]
+            for niveau in niveaux:
+                self.cell(5)
+                self.cell(0, 7, niveau, ln=True)
+            self.ln(2)
+            self.multi_cell(0, 8,
+                "Cela permet de déterminer le niveau cognitif visé et de détecter les incohérences entre les verbes et le niveau annoncé.",
+                align="J")
+            self.ln(6)
+
+            # Étape 2
+            self.set_font("DejaVu", "B", 12)
+            self.set_text_color(25, 25, 112)
+            self.cell(0, 8, "2. Évaluation multicritère", ln=True)
+            self.set_font("DejaVu", "", 11)
+            self.set_text_color(0, 0, 0)
+            self.multi_cell(0, 8,
+                "Chaque objectif est évalué selon plusieurs critères inspirés du modèle SMART, adaptés au contexte pédagogique. Pour être rigoureux, un objectif doit remplir les critères suivants :", align="J")
+            self.ln(2)
+            criteres = [
+                ("Spécifique", "L’objectif doit être clairement formulé, sans ambiguïté, à l’aide d’un vocabulaire compréhensible. Il précise des comportements observables dans un contexte donné."),
+                ("Mesurable", "Il permet une évaluation fiable grâce à des verbes d’action observables. Un seul verbe est recommandé."),
+                ("Approprié (Cohérent)", "Il est aligné avec le contenu du cours, le niveau d’étude, le public cible, et l’objectif général."),
+                ("Réaliste", "Il est atteignable dans le cadre temporel et matériel prévu."),
+                ("Temporellement défini", "Il précise un délai, une échéance ou des jalons clairs.")
+            ]
+            for titre, texte in criteres:
+                self.set_font("DejaVu", "B", 11)
+                self.cell(0, 7, f"• {titre}", ln=True)
+                self.set_font("DejaVu", "", 11)
+                self.multi_cell(0, 8, texte, align="J")
+                self.ln(1)
+            self.multi_cell(0, 8,
+                "Ces critères sont complétés par des règles de rédaction pédagogiques, et chaque objectif reçoit une note sur 5 pour chaque critère.",
+                align="J")
+            self.ln(6)
+
+            # Étape 3
+            self.set_font("DejaVu", "B", 12)
+            self.set_text_color(25, 25, 112)
+            self.cell(0, 8, "3. Amélioration des objectifs", ln=True)
+            self.set_font("DejaVu", "", 11)
+            self.set_text_color(0, 0, 0)
+            self.multi_cell(0, 8,
+                "En cas de non-conformité, des suggestions d’amélioration personnalisées sont générées pour aider à reformuler les objectifs selon les bonnes pratiques.",
+                align="J")
+            self.ln(6)
+
+            # Étape 4
+            self.set_font("DejaVu", "B", 12)
+            self.set_text_color(25, 25, 112)
+            self.cell(0, 8, "4. Synthèse", ln=True)
+            self.set_font("DejaVu", "", 11)
+            self.set_text_color(0, 0, 0)
+            self.multi_cell(0, 8,
+                "Un rapport structuré est généré avec un aperçu global des résultats, une analyse détaillée et plusieurs tableaux récapitulatifs.",
+                align="J")
+
+            self.is_annexe = True
 
         def chapter_body(self, text):
             self.set_font("DejaVu", size=12)
@@ -484,6 +629,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
         def print_chapter(self, num, title, text):
             self.current_chapter_title = title
             self.is_page_de_garde = False
+            self.is_annexe = False
             self.is_chapter_start = True  # Active la logique "pas de header"
             self.add_page()
             self.chapter_title(num, title)
@@ -498,17 +644,18 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
     pdf.add_page_de_garde(
         titre=f"Rapport d’analyse des objectifs pédagogiques du cours de {nom_cours}",
         sous_titre="Évaluation des objectifs pédagogique selon la taxonomie de Bloom et des critères SMART adaptés au contexte pédagogique",
-        auteur="ObjectifsAI",
-        date=datetime.now().strftime("%d %B %Y")
-    )
+        #auteur="ObjectifsAI",
+        date = format_date(datetime.now(), format='d MMMM y', locale='fr')    )
 
-    #pdf.print_chapter(1, "Rappel des informations de cours", rapport['informations_cours'])
+    pdf.add_disclaimer()
     pdf.rappel_infos_cours(nom_cours, niveau, public, objectif_general, objectifs_specifiques_brut)
     pdf.print_chapter(2, "Aperçu global de l'analyse", rapport['aperçu'])
-    pdf.print_chapter(3, "Analyse détaillée", rapport['details'])
-
+    
     table_chif, table_axes, table_recom, table_ameliorer, table_conformes = build_tables_from_recap_dict(recap_dict)
     pdf.add_recap_tables(table_chif, table_axes, table_recom, table_ameliorer, table_conformes)
+    
+    pdf.print_chapter(3, "Analyse détaillée", rapport['details'])
+
 
     # Sauvegarde temporaire
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
