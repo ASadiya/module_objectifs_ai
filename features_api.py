@@ -35,8 +35,19 @@ def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitai
         logger.info("Réponse reçue avec succès.")
         return response
     except Exception as e:
+      if "429" in str(e) and "capacity exceeded" in str(e).lower():
+        message = (
+          "⛔ Le service est temporairement saturé.\n\n"
+          "Cela signifie que la capacité du modèle Mistral est dépassée pour le moment. "
+          "Veuillez patienter quelques instants et réessayer. Si le problème persiste, revenez plus tard.\n\n"
+        )
+        st.error(message)
+        logger.error("Erreur 429 : Capacité dépassée pour le modèle.", exc_info=True)
+      else:
+        st.error("Une erreur est survenue lors de l'appel à l'IA.")
         logger.error(f"Erreur lors de l'appel API : {e}", exc_info=True)
-        return "❌ Une erreur est survenue lors de l'appel à l'IA."
+        
+        return "Une erreur est survenue lors de l'appel à l'IA."
 
 
 # Features
