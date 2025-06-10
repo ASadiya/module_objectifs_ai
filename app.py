@@ -79,7 +79,7 @@ if soumis:
             st.success("Analyse terminée avec succès !")
         except Exception as e:
             st.error(f"Une erreur est survenue pendant l'analyse. Veuillez réessayer.")
-            logger.warning(f"Le récapitulatif a échoué : {str(e)}")
+            logger.warning(f"Une erreur est survenue pendant l'analyse. : {str(e)}")
             st.stop()
 
 
@@ -168,45 +168,64 @@ if soumis:
         </div>
         """, unsafe_allow_html=True)
     
-    with tab2:
-        # Extraction des points clés
-        st.markdown("#### Points importants identifiés")
-        st.info("Cette section présente les points clés du rapport.")
+    if not(isinstance(recap_dict, dict)):
+        logger.warning("Le récapitulatif n'est pas un dictionnaire valide.")
+        #st.stop()  
         
-        col1, col2 = st.columns(2)
+        with tab2:
+            # Extraction des points clés
+            st.markdown("#### Points importants identifiés")
+            st.info("Cette section présente les points clés du rapport.")
+            st.error("Le récapitulatif n'a pas pu être généré correctement.")
+            
+        with tab3:
+            st.markdown("#### Suggestions d'amélioration")
+            st.info("Cette section présente les recommandations prioritaires.")
+                        
+            with st.container():
+                st.markdown("**Recommandations prioritaires :**")
+                st.error("Le récapitulatif n'a pas pu être généré correctement.")
         
-        points_forts = recap_dict.get('points_forts', [])
-        axes_amelioration = recap_dict.get('axes_amelioration', [])
+    else:    
+        with tab2:
+            # Extraction des points clés
+            st.markdown("#### Points importants identifiés")
+            st.info("Cette section présente les points clés du rapport.")
+            
+            col1, col2 = st.columns(2)
+                
+            points_forts = recap_dict.get('points_forts', []) 
+            axes_amelioration = recap_dict.get('axes_amelioration', [])
 
-        with col1:
-            st.markdown("**✅ Points forts détectés :**")
-            if points_forts:
-                for point in points_forts:
-                    st.markdown(f"- {point}")
-            else:
-                st.markdown("_Aucun point fort détecté._")
+            with col1:
+                st.markdown("**✅ Points forts détectés :**")
+                if points_forts:
+                    for point in points_forts:
+                        st.markdown(f"- {point}")
+                else:
+                    st.markdown("_Aucun point fort détecté._")
 
-        with col2:
-            st.markdown("**⚠️ Axes d'amélioration :**")
-            if axes_amelioration:
-                for point in axes_amelioration:
-                    st.markdown(f"- {point}")
-            else:
-                st.markdown("_Aucun axe d'amélioration détecté._")
-        
-    with tab3:
-        st.markdown("#### Suggestions d'amélioration")
-        st.info("Cette section présente les recommandations prioritaires.")
-        
-        recommandation = recap_dict.get('recommandations', [])
-        
-        with st.container():
-            st.markdown("**Recommandations prioritaires :**")
-            if recommandation:
-                for point in recommandation:
-                    st.markdown(f"- {point}")
-            else:
-                st.markdown("_Aucune recommandation détectée._")
+            with col2:
+                st.markdown("**⚠️ Axes d'amélioration :**")
+                if axes_amelioration:
+                    for point in axes_amelioration:
+                        st.markdown(f"- {point}")
+                else:
+                    st.markdown("_Aucun axe d'amélioration détecté._")
+            
+        with tab3:
+            st.markdown("#### Suggestions d'amélioration")
+            st.info("Cette section présente les recommandations prioritaires.")
+            
+            recommandation = recap_dict.get('recommandations', [])
+            
+            with st.container():
+                st.markdown("**Recommandations prioritaires :**")
+                if recommandation:
+                    for point in recommandation:
+                        st.markdown(f"- {point}")
+                else:
+                    st.markdown("_Aucune recommandation détectée._")
 
     # Avertissement IA 
     st.markdown("""
