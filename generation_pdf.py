@@ -337,6 +337,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             
             if getattr(self, "is_annexe", True):
                 chapter_label = "Annexe"
+                num = ""
             else:
                 chapter_label = "Chapitre"
             
@@ -442,29 +443,37 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             pdf.set_xy(10, 35)
             pdf.set_font("DejaVu", 'B', 14)
             pdf.set_text_color(25, 25, 112)  # Couleur d'accent
-            pdf.cell(0, 10, "DISCLAIMER – Contenu généré par IA", ln=True, align="C")
+            pdf.cell(0, 10, "AVERTISSEMENT - Contenu généré par IA", ln=True, align="C")
 
             # Corps du texte
             pdf.set_xy(15, 50)
             pdf.set_font("Helvetica", size=12)
             pdf.set_text_color(0)  # Noir
             pdf.multi_cell(180, 8,
-                """Ces recommandations sont générées automatiquement par un système d'intelligence artificielle.
-
-            Elles visent à guider, non à remplacer l'expertise pédagogique humaine, et doivent être examinées avec discernement avant toute utilisation.""")
+                """
+                    Ces recommandations sont générées automatiquement par un système d'intelligence artificielle.
+                    Elles visent à guider, non à remplacer l'expertise pédagogique humaine, et doivent être examinées avec discernement avant toute utilisation.""")
 
             
         # Constitution du chapitre récapitulatif
         
         def add_recap_tables(self, table_chif, table_axes, table_recom, table_ameliorer, table_conformes):
-            self.current_chapter_title = "Récapitulatif"
+            self.current_chapter_title = "Synthèse des résultats"
             self.is_page_de_garde = False
             self.is_chapter_start = True         
             self.add_page()
-            self.chapter_title(4, "Récapitulatif")
+            self.chapter_title(3, "Synthèse des résultats")
             self.is_chapter_start = False
             
             self.ln(10)
+            
+            self.add_table_objectifs_a_ameliorer(table_ameliorer)
+            self.ln(14)
+
+            self.add_table_objectifs_conformes(table_conformes)
+            self.ln(14)
+            
+            # Ligne de séparation 
             
             self.add_table_chiffres_cles(table_chif)
             self.ln(14)
@@ -473,12 +482,9 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.ln(14)
 
             self.add_table_recommandations(table_recom)
-            self.ln(14)
+            
 
-            self.add_table_objectifs_a_ameliorer(table_ameliorer)
-            self.ln(14)
-
-            self.add_table_objectifs_conformes(table_conformes)
+            
 
         # Constitution du chapitre rappel infos cours
     
@@ -654,8 +660,8 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
     table_chif, table_axes, table_recom, table_ameliorer, table_conformes = build_tables_from_recap_dict(recap_dict)
     pdf.add_recap_tables(table_chif, table_axes, table_recom, table_ameliorer, table_conformes)
     
-    pdf.print_chapter(3, "Analyse détaillée", rapport['details'])
-
+    pdf.print_chapter(4, "Analyse détaillée", rapport['details'])
+    pdf.add_methode_analyse()
 
     # Sauvegarde temporaire
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
