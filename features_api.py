@@ -34,6 +34,7 @@ def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitai
         response = appeler_api_cached(prompt, system_prompt)
         logger.info("Réponse reçue avec succès.")
         return response
+      
     except Exception as e:
       if "429" in str(e) and "capacity exceeded" in str(e).lower():
         message = (
@@ -47,8 +48,8 @@ def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitai
         st.error("Une erreur est survenue lors de l'appel à l'IA.")
         logger.error(f"Erreur lors de l'appel API : {e}", exc_info=True)
         
-        return "Une erreur est survenue lors de l'appel à l'IA."
-
+      #modif return "Une erreur est survenue lors de l'appel à l'IA."
+      return None
 
 # Features
 
@@ -474,58 +475,90 @@ def synthese(nom_cours, niveau, public, rapport):
 
 
 # Fonction principale
+#modif 
+with st.spinner('Analyse en cours, veuillez patienter...'):
+  def assistant_pedagogique(nom_cours, niveau, public, objectif_general, objectifs_specifiques):
+    logger.info("Début de l'analyse pédagogique pour le cours : %s", nom_cours)
 
-def assistant_pedagogique(nom_cours, niveau, public, objectif_general, objectifs_specifiques):
-  logger.info("Début de l'analyse pédagogique pour le cours : %s", nom_cours)
+    try:
+      # Classification selon Bloom
+      logger.info("Étape 1 : Classification selon Bloom")
+      st.info("Classification selon la taxonomie révisée de Bloom...")
+      
+      bloom_classification = classifier_objectifs(objectif_general, objectifs_specifiques)
+      
+      if bloom_classification is None:
+        st.warning("L'analyse a échoué dès la classification des objectifs. Veuillez réessayer.")
+        logger.error("Échec de la classification des objectifs selon Bloom.")
+        st.stop()
+        return None
+        
+      
+      # Évaluation des objectifs
+      logger.info("Étape 2 : Évaluation des objectifs")
+      st.info("Évaluation des objectifs...")
+      
+      evaluations = evaluer_objectifs(nom_cours, niveau, public, bloom_classification)
+      if evaluations is None:
+        st.warning("L'évaluation des objectifs n’a pas pu être effectuée. Veuillez réessayer.")
+        logger.error("Échec de l'évaluation des objectifs.")
+        st.stop()
+        return None
+      
+      evaluations_revisees = auto_eval_evaluation(evaluations)
+      if evaluations_revisees is None:
+        st.warning("L'évaluation des objectifs n’a pas pu être réalisée. Veuillez réessayer.")
+        logger.error("Échec de la vérification de l'évaluation des objectifs.")
+        st.stop()   
+        return None
+      
+      # Recommandations
+      logger.info("Étape 3 : Génération de recommandations")
+      st.info("Génération de recommandations...")
 
-  try:
-    # Classification selon Bloom
-    logger.info("Étape 1 : Classification selon Bloom")
-    st.info("Classification selon la taxonomie révisée de Bloom...")
-    bloom_classification = classifier_objectifs(objectif_general, objectifs_specifiques)
+      suggestions = ameliorer_objectifs(nom_cours, niveau, public, evaluations_revisees)
+      if suggestions is None:
+        st.warning("La génération de recommandations n’a pas pu être effectuée. Veuillez réessayer.")
+        logger.error("Échec de la génération des recommandations.")
+        st.stop()
+        return None
 
-    # Évaluation des objectifs
-    logger.info("Étape 2 : Évaluation des objectifs")
-    st.info("Évaluation des objectifs...")
-    evaluations = evaluer_objectifs(nom_cours, niveau, public, bloom_classification)
-    evaluations_revisees = auto_eval_evaluation(evaluations)
+      suggestions_revisees = auto_eval_suggestions(suggestions)
+      if suggestions_revisees is None:
+        st.warning("La génération de recommandations n’a pas pu être réalisée.")
+        logger.error("Échec de la vérification  recommandations générées.")
+        st.stop()
+        return None
 
-    # Recommandations
-    logger.info("Étape 3 : Génération de recommandations")
-    st.info("Génération de recommandations...")
+      logger.info("Étape 4 : Génération du rapport final")
+      st.info("Génération du rapport...")
+      
+      rapport = f"""
+        {suggestions_revisees}
+        """
+      resultat_final = {
+        "informations_cours": f"""
+          **Cours :** {nom_cours}
+          **Niveau :** {niveau}
+          **Public cible :** {public} 
+          **Objectif général :** 
+            {objectif_general}
+          **Objectifs specifiques :** 
+            {objectifs_specifiques}
+          """,
+        "aperçu": synthese(nom_cours, niveau, public, rapport),
+        "details": rapport
+      }
+      
+      logger.info("Analyse terminée avec succès.")
+      return resultat_final
 
-    suggestions = ameliorer_objectifs(nom_cours, niveau, public, evaluations_revisees)
-    suggestions_revisees = auto_eval_suggestions(suggestions)
-
-    logger.info("Étape 4 : Génération du rapport final")
-    st.info("Génération du rapport...")
-    
-    rapport = f"""
-      {suggestions_revisees}
-      """
-    resultat_final = {
-      "informations_cours": f"""
-        **Cours :** {nom_cours}
-        **Niveau :** {niveau}
-        **Public cible :** {public} 
-        **Objectif général :** 
-          {objectif_general}
-        **Objectifs specifiques :** 
-          {objectifs_specifiques}
-        """,
-      "aperçu": synthese(nom_cours, niveau, public, rapport),
-      "details": rapport
-    }
-    
-    logger.info("Analyse terminée avec succès.")
-    return resultat_final
-
-  except Exception as e:
-    logger.error(f"Erreur dans l'assistant pédagogique : {e}", exc_info=True)
-    return {
-      "aperçu": "❌ Une erreur est survenue.",
-      "details": f"Erreur détaillée : {e}"
-    }
+    except Exception as e:
+      logger.error(f"Erreur dans l'assistant pédagogique : {e}", exc_info=True)
+      return {
+        "aperçu": "❌ Une erreur est survenue.",
+        "details": f"Erreur détaillée : {e}"
+      }
 
 
 #@st.cache_data(show_spinner=False)
