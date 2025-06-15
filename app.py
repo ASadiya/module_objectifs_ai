@@ -35,10 +35,16 @@ if "go" in st.query_params and st.query_params["go"] == "method":
     
 st.markdown("""
 <div style="border-left: 4px solid #2c7be5; padding: 10px 20px; background-color: #c3cfe241; border-radius: 5px;">
-<h4 style = "color: #667eea">Bienvenue sur votre outil d’analyse et d'amélioration des objectifs pédagogiques !</h4>
-<p>Cet outil est conçu pour vous aider à évaluer la qualité des objectifs pédagogiques que vous avez formulés pour votre cours, et à les améliorer. <br>Veuillez renseigner chaque champ avec attention : à partir de vos réponses, un conseiller intelligent vous proposera un retour personnalisé et des pistes d’amélioration.<br>
-<em>Cela ne prend que quelques minutes !</em><br></p>
-<a href="?go=method" style = "font-size: 14px">🔍 Cliquez ici pour en savoir plus sur la méthode d’analyse.</a>
+    <h4 style = "color: #667eea">
+    Bienvenue sur votre outil d’analyse et d'amélioration des objectifs pédagogiques !
+    </h4>
+    <p>
+    Cet outil est conçu pour vous aider à évaluer la qualité des objectifs pédagogiques que vous avez formulés pour votre cours, et à les améliorer. <br>Veuillez renseigner chaque champ avec attention : à partir de vos réponses, un conseiller intelligent vous proposera un retour personnalisé et des pistes d’amélioration.<br>
+    <em>Cela ne prend que quelques minutes !</em><br>
+    </p>
+    <a href="?go=method" style = "font-size: 14px">
+    🔍 Cliquez ici pour en savoir plus sur la méthode d’analyse.
+    </a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -71,16 +77,20 @@ if soumis:
     objectifs_specifiques = nettoyer_objectifs_specifiques(objectif_general, objectifs_specifiques_brut)
     st.info("✅ Données valides, lancement de l'analyse...")
     
-    with st.spinner('Analyse en cours, veuillez patienter...'):
-        try:
-            # Appel du pipeline principal
-            rapport = assistant_pedagogique(nom_cours, niveau, public, objectif_general, objectifs_specifiques)
-        
-            st.success("Analyse terminée avec succès !")
-        except Exception as e:
-            st.error(f"Une erreur est survenue pendant l'analyse. Veuillez réessayer.")
-            logger.warning(f"Une erreur est survenue pendant l'analyse. : {str(e)}")
+
+    try:
+        # Appel du pipeline principal
+        rapport = assistant_pedagogique(nom_cours, niveau, public, objectif_general, objectifs_specifiques)
+    
+        if rapport is None:
+            st.warning("L’analyse a été interrompue avant son terme. Veuillez réessayer.")
             st.stop()
+        
+        st.success("Analyse terminée avec succès !")
+    except Exception as e:
+        st.error(f"Une erreur est survenue pendant l'analyse. Veuillez réessayer.")
+        logger.warning(f"Une erreur est survenue pendant l'analyse. : {str(e)}")
+        st.stop()
 
 
     # Récapitulatif
@@ -88,23 +98,22 @@ if soumis:
         recap = recapitulatif(rapport['details'])
         logger.info("Récapitulatif fait !")
     except Exception as e:
-        st.error(f"Un problème est survenu pendant l'analyse. Veuillez réessayer.")
+        st.error(f"Un problème est survenu pendant le récapitulatif de l'analyse. Veuillez réessayer.")
         logger.warning(f"Le récapitulatif a échoué : {str(e)}")
 
     try:
         recap_dict = llm_output_to_dict(recap)
         logger.info("Conversion du récapitulatif faite.")
     except Exception as e:
-        st.error(f"Un problème est survenu pendant le récapitulatif de l'analyse. Veuillez réessayer.")
+        st.error(f"Une erreur est survenue pendant le récapitulatif de l'analyse. Veuillez réessayer.")
         logger.warning(f"La conversion du récapitulatif a échouée : {str(e)}")
 
-    # Séparation visuelle
+
     st.markdown("---")
     
-    # Section résultats améliorée
+    # Section résultats
     st.markdown("## Résultats de l'analyse")
     
-    # Métriques en colonnes
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(f"""
@@ -126,7 +135,7 @@ if soumis:
         </div>""", unsafe_allow_html=True)
 
 
-    # Synthèse dans une boîte stylisée
+    # Synthèse dans une boîte 
     st.markdown("""
     <div class="resultats-section">
         <h3>Aperçu global</h3>
@@ -139,7 +148,7 @@ if soumis:
     </div>
     """, unsafe_allow_html=True)
 
-    # Rapport détaillé avec onglets
+    # Rapport détaillé 
     st.markdown("""
     <div class="resultats-section">
         <h3>Rapport détaillé</h3>
@@ -240,7 +249,7 @@ if soumis:
 
     st.markdown("---")
 
-    # Section téléchargement stylisée
+    # Section téléchargement 
     st.markdown("### 📥 Télécharger le rapport")
     st.markdown(" ")
     

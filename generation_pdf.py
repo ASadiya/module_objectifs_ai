@@ -4,6 +4,7 @@ from fpdf import FPDF
 import tempfile
 from datetime import datetime
 from babel.dates import format_date
+from IPython.display import display, FileLink
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def llm_output_to_dict(llm_output):
         cleaned_output = '\n'.join(lines[start_idx:end_idx + 1])
         logger.debug(f"Balises markdown supprimées, nouvelle longueur: {len(cleaned_output)} caractères")
     
-    # Méthode 1: Essayer ast.literal_eval (plus sûr)
+    # Méthode 1: Essayer ast.literal_eval 
     try:
         logger.debug("Tentative de conversion avec ast.literal_eval")
         result = ast.literal_eval(cleaned_output)
@@ -88,10 +89,7 @@ def llm_output_to_dict(llm_output):
 # Fonction similaire pour facilité l'affichage des détails du rapport 
 
 def nettoyer_sortie_llm(texte: str) -> str:
-    """
-    Nettoie la sortie d'un LLM en supprimant les balises Markdown de type ```...```.
-    Conserve uniquement le contenu utile à afficher dans du HTML.
-    """
+    
     texte = texte.strip()
     logger.debug(f"Texte brut, longueur: {len(texte)}")
 
@@ -108,7 +106,7 @@ def nettoyer_sortie_llm(texte: str) -> str:
     return texte_nettoye.strip()
 
 
-def build_tables_from_recap_dict(recap_dict):
+def build_tables(recap_dict):
     table_chif = [('Élément analysé ', 'Nombre')]
     table_chif.append(("Objectifs saisis", str(recap_dict.get('objectifs_total', 00))))
     table_chif.append(("Objectifs conformes", str(recap_dict.get('objectifs_conformes', {}).get('nbre_total', 00))))
@@ -327,7 +325,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.set_y(30)
 
             self.set_fill_color(70, 130, 180)  # Badge vertical
-            self.set_font("helvetica", "B", 14)
+            self.set_font("DejaVu", "B", 14)
             self.cell(2, 18, "", fill=True, border=0)
 
             self.set_fill_color(250, 250, 250)
@@ -359,7 +357,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.set_fill_color(245, 248, 255)
             self.rect(12, 9.5, 185, 9, 'F')
 
-            self.set_font("helvetica", "B", 10)
+            self.set_font("DejaVu", "B", 10)
             self.set_draw_color(70, 130, 180)
             
             # Position initiale de la marge
@@ -390,7 +388,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.cell(
                 70,
                 8,
-                f"chapter_label : {self.current_chapter_title}",
+                f"{chapter_label} : {self.current_chapter_title}",
                 border="B",
                 ln=True,
                 align="R"
@@ -450,11 +448,11 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             pdf.set_font("Helvetica", size=12)
             pdf.set_text_color(0)  # Noir
             pdf.multi_cell(180, 8,
-                """
-                    Ces recommandations sont générées automatiquement par un système d'intelligence artificielle.
-                    Elles visent à guider, non à remplacer l'expertise pédagogique humaine, et doivent être examinées avec discernement avant toute utilisation.""")
+"""
+    Ces recommandations sont générées automatiquement par un système d'intelligence artificielle.
+    Elles visent à guider, non à remplacer l'expertise pédagogique humaine, et doivent être examinées avec discernement avant toute utilisation.
+                    """)
 
-            
         # Constitution du chapitre récapitulatif
         
         def add_recap_tables(self, table_chif, table_axes, table_recom, table_ameliorer, table_conformes):
@@ -482,9 +480,6 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.ln(14)
 
             self.add_table_recommandations(table_recom)
-            
-
-            
 
         # Constitution du chapitre rappel infos cours
     
@@ -540,13 +535,126 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             self.cell(3)
             self.multi_cell(0, 7, objectifs_specifiques_brut, align='J')
 
+        # Constitution du résumé  
+        
+        def extract_resume_notes(resume_text):
+            logger.debug("Début de l'analyse du résumé pour extraire les objectifs et la complétude")
+            
+            objectives_data = {}
+            
+            pattern = r'• (Objectif (?:général|[\d]+)) : Spécifique \((\d+)/5\), Mesurable \((\d+)/5\), Approprié \(Cohérent\) \((\d+)/5\), Réaliste \((\d+)/5\), Temporellement défini \((\d+)/5\)'
+            
+            matches = re.findall(pattern, resume_text)
+            logger.info(f" {len(matches)} objectifs trouvés dans le texte")
+
+            for match in matches:
+                obj_name = match[0]
+                scores = {
+                    'specifique': int(match[1]),
+                    'mesurable': int(match[2]),
+                    'approprie': int(match[3]),
+                    'realiste': int(match[4]),
+                    'temporel': int(match[5])
+                }
+                total_score = sum(scores.values())
+                objectives_data[obj_name] = {
+                    'scores': scores,
+                    'total': total_score,
+                    'max_possible': 25
+                }
+            
+            completude_pattern = r'• Complétude : (\d+)/5'
+            completude_match = re.search(completude_pattern, resume_text)
+            completude_score = int(completude_match.group(1)) if completude_match else 0
+            logger.info(f" Score de complétude: {completude_score}/5")
+
+            logger.info("Parsing terminé avec succès")
+
+            return objectives_data, completude_score
+        
+        def add_table_resume(self, resume_text):
+            logger.info("Création des données de tableau...")
+            
+            objectives_data, completude_score = self.extract_resume_notes(resume_text)
+            
+            # En-têtes du tableau
+            table_smart = [('Objectif', 'Spécifique', 'Mesurable', 'Approprié', 'Réaliste', 'Temporel', 'Total', 'Pourcentage')]
+            
+            if objectives_data:
+                logger.info(f" Traitement de {len(objectives_data)} objectifs pour le tableau")
+                
+                for obj_name, data in objectives_data.items():
+                    scores = data['scores']
+                    total = data['total']
+                    percentage = round((total / data['max_possible']) * 100, 1)
+                    
+                    table_smart.append((
+                        obj_name,
+                        f"{scores['specifique']}/5",
+                        f"{scores['mesurable']}/5",
+                        f"{scores['approprie']}/5",
+                        f"{scores['realiste']}/5",
+                        f"{scores['temporel']}/5",
+                        f"{total}/25",
+                        f"{percentage}%"
+                    ))
+                    logger.info(f" Ligne ajoutée: {obj_name} ({percentage}%)")
+                
+                table_smart.append((
+                    'Complétude',
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                    f"{completude_score}/5",
+                    f"{(completude_score/5)*100}%"
+                ))
+                logger.info(f" Ligne de complétude ajoutée: {(completude_score/5)*100}%")
+                
+                logger.info(f" Tableau créé avec {len(table_smart)} lignes (en-têtes inclus)")
+            else:
+                logger.info("Aucune donnée trouvée - ajout d'une ligne vide")
+                table_smart.append(('', 'Aucune donnée trouvée', '', '', '', '', '', ''))
+            
+            return table_smart
+
+        def add_resume(self, resume_text):
+            self.ln(20)
+            self.set_font("DejaVu", "B", 16)
+            self.set_text_color(25, 25, 112)
+            self.cell(0, 8, "Résumé", ln=True)
+            self.ln(4)
+
+            logger.info("Création du tableau dans le pdf...")
+
+            table_smart = self.add_table_resume(resume_text)
+            
+            self.set_font("DejaVu", "", 9)
+            with self.table(borders_layout="ALL", cell_fill_color=200, cell_fill_mode="ROWS", line_height=pdf.font_size * 2, text_align="CENTER", width=190) as table:
+                header_row = table.row()
+                for header in table_smart[0]:
+                    header_row.cell(header)
+                logger.info(f" En-têtes ajoutés: {len(table_smart[0])} colonnes")
+                
+                data_rows_count = 0
+                for row_data in table_smart[1:]:
+                    data_row = table.row()
+                    for cell_data in row_data:
+                        data_row.cell(str(cell_data))
+                    data_rows_count += 1
+                logger.info(f" {data_rows_count} lignes de données ajoutées")
+                
+                logger.info(f" Tableau résumé créé avec succès")
+        
         def add_methode_analyse(self):
             self.is_annexe = True
-            self.current_chapter_title = "Méthode d’analyse"
+            self.current_chapter_title = "Méthode d'analyse"
             self.is_page_de_garde = False
             self.is_chapter_start = True
             self.add_page()
-            self.chapter_title(5, "Méthode d’analyse utilisée")
+            self.chapter_title(5, "Méthode d'analyse utilisée")
+            self.is_chapter_start = False
 
             self.set_font("DejaVu", "", 11)
             self.multi_cell(0, 8, 
@@ -622,7 +730,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
                 "Un rapport structuré est généré avec un aperçu global des résultats, une analyse détaillée et plusieurs tableaux récapitulatifs.",
                 align="J")
 
-            self.is_annexe = True
+            self.is_annexe = False
 
         def chapter_body(self, text):
             self.set_font("DejaVu", size=12)
@@ -657,13 +765,19 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
     pdf.rappel_infos_cours(nom_cours, niveau, public, objectif_general, objectifs_specifiques_brut)
     pdf.print_chapter(2, "Aperçu global de l'analyse", rapport['aperçu'])
     
-    table_chif, table_axes, table_recom, table_ameliorer, table_conformes = build_tables_from_recap_dict(recap_dict)
+    table_chif, table_axes, table_recom, table_ameliorer, table_conformes = build_tables(recap_dict)
     pdf.add_recap_tables(table_chif, table_axes, table_recom, table_ameliorer, table_conformes)
     
     pdf.print_chapter(4, "Analyse détaillée", rapport['details'])
+    pdf.add_resume(rapport['details'])
     pdf.add_methode_analyse()
 
+   
     # Sauvegarde temporaire
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(temp.name)
     return temp.name 
+    """
+    pdf.output("preview.pdf")
+    display(FileLink("preview.pdf"))
+     """
