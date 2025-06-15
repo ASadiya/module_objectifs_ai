@@ -4,7 +4,7 @@ from fpdf import FPDF
 import tempfile
 from datetime import datetime
 from babel.dates import format_date
-from IPython.display import display, FileLink
+#from IPython.display import display, FileLink
 
 logger = logging.getLogger(__name__)
 
