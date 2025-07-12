@@ -537,7 +537,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
 
         # Constitution du résumé  
         
-        def extract_resume_notes(resume_text):
+        def extract_resume_notes(self, resume_text):
             logger.debug("Début de l'analyse du résumé pour extraire les objectifs et la complétude")
             
             objectives_data = {}
@@ -545,6 +545,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             pattern = r'• (Objectif (?:général|[\d]+)) : Spécifique \((\d+)/5\), Mesurable \((\d+)/5\), Approprié \(Cohérent\) \((\d+)/5\), Réaliste \((\d+)/5\), Temporellement défini \((\d+)/5\)'
             
             matches = re.findall(pattern, resume_text)
+            logger.info(f"Extraction des objectifs avec le pattern : {pattern}")
             logger.info(f" {len(matches)} objectifs trouvés dans le texte")
 
             for match in matches:
@@ -618,7 +619,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
                 table_smart.append(('', 'Aucune donnée trouvée', '', '', '', '', '', ''))
             
             return table_smart
-
+        """
         def add_resume(self, resume_text):
             self.ln(20)
             self.set_font("DejaVu", "B", 16)
@@ -631,7 +632,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
             table_smart = self.add_table_resume(resume_text)
             
             self.set_font("DejaVu", "", 9)
-            with self.table(borders_layout="ALL", cell_fill_color=200, cell_fill_mode="ROWS", line_height=pdf.font_size * 2, text_align="CENTER", width=190) as table:
+            with self.table(borders_layout="ALL", cell_fill_color=200, cell_fill_mode="ROWS", line_height=pdf.font_size * 2, text_align="CENTER", width=140) as table:
                 header_row = table.row()
                 for header in table_smart[0]:
                     header_row.cell(header)
@@ -646,7 +647,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
                 logger.info(f" {data_rows_count} lignes de données ajoutées")
                 
                 logger.info(f" Tableau résumé créé avec succès")
-        
+        """
         def add_methode_analyse(self):
             self.is_annexe = True
             self.current_chapter_title = "Méthode d'analyse"
@@ -769,7 +770,7 @@ def generer_pdf(nom_cours, niveau, public, objectif_general, objectifs_specifiqu
     pdf.add_recap_tables(table_chif, table_axes, table_recom, table_ameliorer, table_conformes)
     
     pdf.print_chapter(4, "Analyse détaillée", rapport['details'])
-    pdf.add_resume(rapport['details'])
+    #pdf.add_resume(rapport['details'])
     pdf.add_methode_analyse()
 
    
