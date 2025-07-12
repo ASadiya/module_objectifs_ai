@@ -1,9 +1,12 @@
 import os
 import streamlit as st
-from mistralai import Mistral
 from dotenv import load_dotenv
 import logging
-from langfuse import Langfuse, observe, get_client
+from langfuse import Langfuse, observe
+from google.generativeai import GenerativeModel
+import google.generativeai as genai
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,96 +17,82 @@ langfuse = Langfuse(
     host=os.getenv("LANGFUSE_HOST")
 )
 
-load_dotenv()
-api_key = os.getenv("MISTRAL_API_KEY")
+api_key_classification = os.getenv("GEMINI_API_KEY_CLASSIFICATION")
+api_key_evaluation = os.getenv("GEMINI_API_KEY_EVALUATION")
+api_key_suggestion = os.getenv("GEMINI_API_KEY_SUGGESTION")
+api_key_recap_synthese = os.getenv("GEMINI_API_KEY_RECAP_SYNTHESE")
 
-model = "mistral-large-latest"
+model_name = "gemini-1.5-flash"
 
-#@st.cache_resource
-def get_client():
-  return Mistral(api_key=api_key)
-
-#@st.cache_data(show_spinner=False)
 @observe(as_type="generation")
-def appeler_api_traced(**kwargs):
-  # Clone kwargs to avoid modifying the original input
-  kwargs_clone = kwargs.copy()
- 
-  # Extract relevant parameters from kwargs
-  input = kwargs_clone.pop('messages', None)
-  model = kwargs_clone.pop('model', None)
-  min_tokens = kwargs_clone.pop('min_tokens', None)
-  max_tokens = kwargs_clone.pop('max_tokens', None)
-  temperature = kwargs_clone.pop('temperature', None)
-  top_p = kwargs_clone.pop('top_p', None)
- 
-  # Filter and prepare model parameters for logging
-  model_parameters = {
-        "maxTokens": max_tokens,
-        "minTokens": min_tokens,
-        "temperature": temperature,
-        "top_p": top_p
-    }
-  model_parameters = {k: v for k, v in model_parameters.items() if v is not None}
- 
-  # Log the input and model parameters before calling the LLM
-  langfuse.update_current_generation(
-      input=input,
-      model=model,
-      model_parameters=model_parameters,
-      metadata=kwargs_clone,
- 
-  )
-  
-  mistral_client = get_client()
-  res = mistral_client.chat.complete(**kwargs)
-  
-  # Log the usage details and output content after the LLM call
-  langfuse.update_current_generation(
-      usage_details={
-          "input": res.usage.prompt_tokens,
-          "output": res.usage.completion_tokens
-      },
-      output=res.choices[0].message.content
-  )
- 
-  # Return the model's response object
-  return res
+def appeler_api_traced(*, api_key, **kwargs):
+    prompt = kwargs.get("prompt")
+    system_prompt = kwargs.get("system_prompt", None)
 
+    generation_config = {
+        "temperature": kwargs.get("temperature"),
+        "top_p": kwargs.get("top_p"),
+        "top_k": kwargs.get("top_k"),
+        "max_output_tokens": kwargs.get("max_output_tokens", 1024)
+    }
+    generation_config = {k: v for k, v in generation_config.items() if v is not None}
+
+    langfuse.update_current_generation(
+        input=prompt,
+        model=model_name,
+        model_parameters=generation_config
+    )
+
+    genai.configure(api_key=api_key)
+
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        generation_config=generation_config
+    )
+
+    try:
+        if system_prompt:
+            response = model.generate_content([system_prompt, prompt])
+        else:
+            response = model.generate_content(prompt)
+
+        langfuse.update_current_generation(output=response.text)
+        return response
+
+    except Exception as e:
+        logger.error("Erreur lors de l'appel Gemini", exc_info=True)
+        raise e
 
 @observe()
-def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitaire."):
-    logger.info("Appel de l'API Mistral...")
-    
+def appeler_api(prompt, api_key, system_prompt="Tu es un expert en pédagogie universitaire."):
+    logger.info("Appel de l'API Gemini...")
+
     try:
-      response = appeler_api_traced(
-        model=model,
-        #max_tokens=1024,
-        #temperature=0.4,
-        messages=[
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": prompt},
-        ]
-      )
-      logger.info("Réponse reçue avec succès.")
-      
-      return response.choices[0].message.content
-      
-    except Exception as e:
-      if "429" in str(e) and "capacity exceeded" in str(e).lower():
-        message = (
-          "⛔ Le service est temporairement saturé.\n\n"
-          "Cela signifie que la capacité du modèle Mistral est dépassée pour le moment. "
-          "Veuillez patienter quelques instants et réessayer. Si le problème persiste, revenez plus tard.\n\n"
+        response = appeler_api_traced(
+            api_key=api_key,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.4,
+            max_output_tokens=2024
         )
-        st.error(message)
-        logger.error("Erreur 429 : Capacité dépassée pour le modèle.", exc_info=True)
-      else:
-        st.error("Une erreur est survenue lors de l'appel à l'IA.")
-        logger.error(f"Erreur lors de l'appel API : {e}", exc_info=True)
-        
-      #modif return "Une erreur est survenue lors de l'appel à l'IA."
-      return None
+        logger.info("Réponse reçue avec succès.")
+        return response.text
+
+    except Exception as e:
+        if "429" in str(e) and "quota" in str(e).lower():
+            message = (
+                "⛔ Le service est temporairement saturé.\n\n"
+                "Cela signifie que la capacité du modèle Gemini est dépassée pour le moment. "
+                "Veuillez patienter quelques instants et réessayer. Si le problème persiste, revenez plus tard.\n\n"
+            )
+            st.error(message)
+            logger.error("Erreur 429 : Quota dépassé pour le modèle Gemini.", exc_info=True)
+        else:
+            st.error("Une erreur est survenue lors de l'appel à l'IA.")
+            logger.error(f"Erreur lors de l'appel API : {e}", exc_info=True)
+
+        return None
+
 
 # Features
 
@@ -150,7 +139,7 @@ def classifier_objectifs(objectif_general, objectifs_specifiques):
 
   """
 
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_classification)
 
 
 
@@ -206,31 +195,31 @@ def evaluer_objectifs(nom_cours, niveau, public, bloom_classification):
     Classification bloom des objectifs : {bloom_classification}
 
     Instruction :
-    Pour chaque objectif, rappelle l'objectif, son niveau dans la taxonomie de bloom, puis évalue l'objectif sur les critères de : spécificité, mesurabilité, cohérence, réalime, temporalité, tels que expliqués dans la base de connaissances. 
-    Au niveau de la cohérence, n'oublie pas de vérifier que l'objectif est en adéquation avec le nom du cours. Signale toute incohérence.
-    
-    A la fin de ton évaluation de chaque critère, attribue une note de 1 à 5 résultante de cette évaluation, et cela pour chaque objectif.
-    Fais-le sous cette forme :
-      Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
-      - Niveau : [niveau de Bloom]
-      - Spécifique : [Ton commentaire sur la spécificité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-      - Mesurable : [Ton commentaire sur la mesurabilité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-      - Approprié (Cohérent) : [Ton commentaire sur la cohérence de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-      - Réaliste : [Ton commentaire sur le réalisme de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-      - Temporellement défini : [Ton commentaire sur la temporalité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
+      Pour chaque objectif, rappelle l'objectif, son niveau dans la taxonomie de bloom, puis évalue l'objectif sur les critères de : spécificité, mesurabilité, cohérence, réalime, temporalité, tels que expliqués dans la base de connaissances. 
+      Au niveau de la cohérence, n'oublie pas de vérifier que l'objectif est en adéquation avec le nom du cours. Signale toute incohérence.
+      
+      A la fin de ton évaluation de chaque critère, attribue une note de 1 à 5 résultante de cette évaluation, et cela pour chaque objectif.
+      Fais-le sous cette forme :
+        Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
+        - Niveau : [niveau de Bloom]
+        - Spécifique : [Ton commentaire sur la spécificité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
+        - Mesurable : [Ton commentaire sur la mesurabilité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
+        - Approprié (Cohérent) : [Ton commentaire sur la cohérence de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
+        - Réaliste : [Ton commentaire sur le réalisme de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
+        - Temporellement défini : [Ton commentaire sur la temporalité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
 
-    Si tu ne possèdes pas assez d'informations pour évaluer un objectif sur un critère, dis "Je ne peux pas évaluer cet objectif sur ce critère pour cause de manque d'informations sur" et tu complètes ce sur quoi porte l'information manquante.
+      Si tu ne possèdes pas assez d'informations pour évaluer un objectif sur un critère, dis "Je ne peux pas évaluer cet objectif sur ce critère pour cause de manque d'informations sur" et tu complètes ce sur quoi porte l'information manquante.
 
-    Après l'analyse de ces critères sur chaque objectif, tu évalues le critère de la Complétude sur l'ensemble des objectifs spécifiques, et tu lui attribues également une note.
-    
-    À la fin, dans le résumé, inclus le récapitulatif des notes de chaque objectif sous cette forme :
-    - Objectif [numéro de l'objectif] : Spécifique ([note]/5), Mesurable ([note]/5), Approprié (Cohérent) ([note]/5), Réaliste ([note]/5), Temporellement défini ([note]/5).
+      Après l'analyse de ces critères sur chaque objectif, tu évalues le critère de la Complétude sur l'ensemble des objectifs spécifiques, et tu lui attribues également une note.
+      
+      À la fin, dans le résumé, inclus le récapitulatif des notes de chaque objectif sous cette forme :
+      - Objectif [numéro de l'objectif] : Spécifique ([note]/5), Mesurable ([note]/5), Approprié (Cohérent) ([note]/5), Réaliste ([note]/5), Temporellement défini ([note]/5).
 
-    Complétude ([note]/5)
+      Complétude ([note]/5)
 
   """
 
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_evaluation)
 
 #@st.cache_data(show_spinner=False)
 def auto_eval_evaluation(evaluation):
@@ -288,7 +277,7 @@ def auto_eval_evaluation(evaluation):
 
     # Version révisée dans le même format :
     """
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_evaluation)
 
 
 # Améliorations et recommandations
@@ -352,6 +341,7 @@ def ameliorer_objectifs(nom_cours, niveau, public, evaluation_objectifs):
         - Approprié (Cohérent) : [Commentaire contenu dans l'évaluation de cet objectif sur ce critère]. **Note : [Note attribuée dans l'évaluation]**
         - Réaliste : [Commentaire contenu dans l'évaluation de cet objectif sur ce critère]. Note : **[Note attribuée dans l'évaluation]**
         - Temporellement défini : [Commentaire contenu dans l'évaluation de cet objectif sur ce critère]. Note : **[Note attribuée dans l'évaluation]**
+        
         Recommandation(s) :
         - [Critère(s) sur lequel porte la recommandation] : [Ta recommandation pour améliorer l'objectif. Tu peux si nécessaire donner un exemple.]
         Si tu estimes que l'objectif est déjà optimal, tu peux ne pas donner de recommandations.
@@ -379,7 +369,7 @@ def ameliorer_objectifs(nom_cours, niveau, public, evaluation_objectifs):
         
       """
 
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_suggestion)
 
 #@st.cache_data(show_spinner=False)
 def auto_eval_suggestions(suggestions):
@@ -436,7 +426,7 @@ def auto_eval_suggestions(suggestions):
 
     # Version révisée :
     """
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_suggestion)
 
 
 #@st.cache_data(show_spinner=False)
@@ -524,7 +514,7 @@ def synthese(nom_cours, niveau, public, rapport):
 
   Merci de produire uniquement la synthèse, sans autre ajout.
   """
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_recap_synthese)
 
 
 
@@ -576,6 +566,7 @@ with st.spinner('Analyse en cours, veuillez patienter...'):
         st.stop()
         return None
 
+      """
       suggestions_revisees = auto_eval_suggestions(suggestions)
       if suggestions_revisees is None:
         st.warning("La génération de recommandations n’a pas pu être réalisée.")
@@ -585,9 +576,10 @@ with st.spinner('Analyse en cours, veuillez patienter...'):
 
       logger.info("Étape 4 : Génération du rapport final")
       st.info("Génération du rapport...")
+      """
       
       rapport = f"""
-        {suggestions_revisees}
+        {suggestions}
         """
       resultat_final = {
         "informations_cours": f"""
@@ -653,7 +645,7 @@ def recapitulatif(rapport) -> dict:
 
     Réponds uniquement avec un objet Python de type `dict` valide. Aucune explication. Pas de texte hors du dictionnaire.
     """
-  return appeler_api(prompt)
+  return appeler_api(prompt, api_key=api_key_recap_synthese)
 
 
 langfuse.flush()
