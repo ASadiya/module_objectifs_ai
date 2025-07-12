@@ -3,37 +3,91 @@ import streamlit as st
 from mistralai import Mistral
 from dotenv import load_dotenv
 import logging
+from langfuse import Langfuse, observe, get_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+langfuse = Langfuse(
+    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    host=os.getenv("LANGFUSE_HOST")
+)
 
 load_dotenv()
 api_key = os.getenv("MISTRAL_API_KEY")
 
 model = "mistral-large-latest"
 
-@st.cache_resource
+#@st.cache_resource
 def get_client():
   return Mistral(api_key=api_key)
 
 #@st.cache_data(show_spinner=False)
-def appeler_api_cached(prompt, system_prompt):
-  client = get_client()
-  chat_response = client.chat.complete(
-    model= model,
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": prompt},
-    ]
-)
-  return chat_response.choices[0].message.content
+@observe(as_type="generation")
+def appeler_api_traced(**kwargs):
+  # Clone kwargs to avoid modifying the original input
+  kwargs_clone = kwargs.copy()
+ 
+  # Extract relevant parameters from kwargs
+  input = kwargs_clone.pop('messages', None)
+  model = kwargs_clone.pop('model', None)
+  min_tokens = kwargs_clone.pop('min_tokens', None)
+  max_tokens = kwargs_clone.pop('max_tokens', None)
+  temperature = kwargs_clone.pop('temperature', None)
+  top_p = kwargs_clone.pop('top_p', None)
+ 
+  # Filter and prepare model parameters for logging
+  model_parameters = {
+        "maxTokens": max_tokens,
+        "minTokens": min_tokens,
+        "temperature": temperature,
+        "top_p": top_p
+    }
+  model_parameters = {k: v for k, v in model_parameters.items() if v is not None}
+ 
+  # Log the input and model parameters before calling the LLM
+  langfuse.update_current_generation(
+      input=input,
+      model=model,
+      model_parameters=model_parameters,
+      metadata=kwargs_clone,
+ 
+  )
+  
+  mistral_client = get_client()
+  res = mistral_client.chat.complete(**kwargs)
+  
+  # Log the usage details and output content after the LLM call
+  langfuse.update_current_generation(
+      usage_details={
+          "input": res.usage.prompt_tokens,
+          "output": res.usage.completion_tokens
+      },
+      output=res.choices[0].message.content
+  )
+ 
+  # Return the model's response object
+  return res
 
+
+@observe()
 def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitaire."):
     logger.info("Appel de l'API Mistral...")
+    
     try:
-        response = appeler_api_cached(prompt, system_prompt)
-        logger.info("Réponse reçue avec succès.")
-        return response
+      response = appeler_api_traced(
+        model=model,
+        #max_tokens=1024,
+        #temperature=0.4,
+        messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt},
+        ]
+      )
+      logger.info("Réponse reçue avec succès.")
+      
+      return response.choices[0].message.content
       
     except Exception as e:
       if "429" in str(e) and "capacity exceeded" in str(e).lower():
@@ -55,7 +109,7 @@ def appeler_api(prompt, system_prompt="Tu es un expert en pédagogie universitai
 
 # Classification selon le niveau de Bloom
 
-@st.cache_data(show_spinner=False)
+#@st.cache_data(show_spinner=False)
 def classifier_objectifs(objectif_general, objectifs_specifiques):
   base_connaissances = """
     Tu es un expert en pédagogie universitaire, chargé d'assister les enseignants dans la constitution d'objectifs pédagogiques optimaux pour leurs cours.
@@ -493,7 +547,6 @@ with st.spinner('Analyse en cours, veuillez patienter...'):
         st.stop()
         return None
         
-      
       # Évaluation des objectifs
       logger.info("Étape 2 : Évaluation des objectifs")
       st.info("Évaluation des objectifs...")
@@ -601,3 +654,6 @@ def recapitulatif(rapport) -> dict:
     Réponds uniquement avec un objet Python de type `dict` valide. Aucune explication. Pas de texte hors du dictionnaire.
     """
   return appeler_api(prompt)
+
+
+langfuse.flush()
