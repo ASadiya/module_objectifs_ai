@@ -17,15 +17,15 @@ langfuse = Langfuse(
     host=os.getenv("LANGFUSE_HOST")
 )
 
-api_key_classification = os.getenv("GEMINI_API_KEY_CLASSIFICATION")
-api_key_evaluation = os.getenv("GEMINI_API_KEY_EVALUATION")
-api_key_suggestion = os.getenv("GEMINI_API_KEY_SUGGESTION")
-api_key_recap_synthese = os.getenv("GEMINI_API_KEY_RECAP_SYNTHESE")
+api_key_classification = os.getenv("GEMINI_2_API_KEY_CLASSIFICATION")
+api_key_evaluation = os.getenv("GEMINI_2_API_KEY_EVALUATION")
+api_key_suggestion = os.getenv("GEMINI_2_API_KEY_SUGGESTION")
+api_key_recap_synthese = os.getenv("GEMINI_2_API_KEY_RECAP_SYNTHESE")
 
 model_name = "gemini-1.5-flash"
 
 @observe(as_type="generation")
-def appeler_api_traced(*, api_key, **kwargs):
+def appeler_api_traced(*, my_api_key, **kwargs):
     prompt = kwargs.get("prompt")
     system_prompt = kwargs.get("system_prompt", None)
 
@@ -43,7 +43,7 @@ def appeler_api_traced(*, api_key, **kwargs):
         model_parameters=generation_config
     )
 
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=my_api_key)
 
     model = genai.GenerativeModel(
         model_name=model_name,
@@ -69,7 +69,7 @@ def appeler_api(prompt, api_key, system_prompt="Tu es un expert en pédagogie un
 
     try:
         response = appeler_api_traced(
-            api_key=api_key,
+            my_api_key=api_key,
             prompt=prompt,
             system_prompt=system_prompt,
             temperature=0.4,
