@@ -22,7 +22,7 @@ api_key_evaluation = os.getenv("GEMINI_2_API_KEY_EVALUATION")
 api_key_suggestion = os.getenv("GEMINI_2_API_KEY_SUGGESTION")
 api_key_recap_synthese = os.getenv("GEMINI_2_API_KEY_RECAP_SYNTHESE")
 
-model_name = "gemini-1.5-flash"
+model_name = "gemini-2.0-flash"
 
 @observe(as_type="generation")
 def appeler_api_traced(*, my_api_key, **kwargs):
@@ -73,7 +73,7 @@ def appeler_api(prompt, api_key, system_prompt="Tu es un expert en pédagogie un
             prompt=prompt,
             system_prompt=system_prompt,
             temperature=0.4,
-            max_output_tokens=2024
+            #max_output_tokens=2024
         )
         logger.info("Réponse reçue avec succès.")
         return response.text
