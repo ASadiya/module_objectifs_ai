@@ -481,7 +481,7 @@ class PedagogicalAgent:
                                 "finalize_report": "Finalisation du rapport"
                             }.get(node_name, node_name)
                             
-                            st.info(f"🔄 {step_name}...")
+                            st.info(f" {step_name}...")
             
             # Récupération du résultat final
             final_state = await self.app.aget_state(config)
@@ -521,76 +521,19 @@ def assistant_pedagogique(nom_cours, niveau, public, objectif_general, objectifs
     finally:
         loop.close()
 
-# Fonction pour récapitulatif (identique au code original)
-async def recapitulatif(rapport: str, api_key: str) -> str:
-    """Fonction récapitulatif identique au code original"""
-    prompt = f"""
-    Tu es un assistant pédagogique expert. À partir du rapport suivant, génère une synthèse structurée dans un dictionnaire Python avec les éléments suivants :
-        
-    - **points_forts** : une liste des éléments positifs remarqués dans la formulation des objectifs (clarté, niveau de Bloom, adéquation au contenu du cours, etc.)
+def recapitulatif(rapport: str) -> str:
 
-    - **axes_amelioration** : une liste synthétique des améliorations générales suggérées (par exemple : "Certains objectifs ne sont pas assez précis, ce qui rend leur compréhension et leur évaluation difficiles.", "Certains verbes utilisés ne reflètent pas le niveau attendu selon la taxonomie de Bloom.", etc.)
-
-    - **objectifs_total** : le nombre total d'objectifs analysés.
-
-    - **objectifs_conformes** :
-        - `nbre_total` : nombre d'objectifs conformes,
-        - `liste` : une liste de dictionnaires, chacun contenant :
-            - `num` : le numéro de l'objectif,
-            - `objectif` : le texte de l'objectif,
-            - `niveau_bloom` : le niveau de la taxonomie de Bloom identifié.
-
-    - **objectifs_a_ameliorer** :
-        - `nbre_total` : nombre d'objectifs à corriger,
-        - `liste` : une liste de dictionnaires, chacun contenant :
-            - `num` : le numéro de l'objectif,
-            - `objectif` : le texte original,
-            - `probleme_resume` : résumé du défaut,
-            - `suggestion` : résumé de la proposition de reformulation ou d'amélioration.
-
-    - **recommandations** : un résumé, sous forme de liste, des recommandations générales à l'intention de l'enseignant pour améliorer la formulation des objectifs.
-
-    - **niveaux_bloom_utilises** : une liste récapitulative des niveaux de la taxonomie de Bloom identifiés dans l'ensemble des objectifs, qu'ils soient objectif général comme spécifique, conforme comme à améliorer. Ex : ['Connaître', 'Comprendre', etc]
-    
-    Les objectifs conformes sont ceux qui ont 5/5 pour tous les critères.
-    Les objectifs à améliorer sont ceux qui n'ont pas obtenu 5/5 pour tous les critères.
-    
-    Voici le rapport à analyser :
-
-    {rapport}
-
-    Réponds uniquement avec un objet Python de type `dict` valide. Aucune explication. Pas de texte hors du dictionnaire.
-    """
-    
     model = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
-        google_api_key=api_key,
+        google_api_key=os.getenv("GEMINI_API_KEY_RECAP_SYNTHESE"),
         temperature=0.4,
         max_output_tokens=2024,
         #callbacks=[langfuse_handler]
     )
-    
-    return await model.ainvoke(prompt)
 
-# Exemple d'utilisation
-if __name__ == "__main__":
-    # Test avec données d'exemple
-    test_data = {
-        "nom_cours": "Introduction à la Programmation Python",
-        "niveau": "Licence 1",
-        "public": "Étudiants débutants en informatique",
-        "objectif_general": "Maîtriser les bases de la programmation Python",
-        "objectifs_specifiques": [
-            "Comprendre la syntaxe de base de Python",
-            "Savoir utiliser les structures de contrôle",
-            "Être capable de créer des fonctions simples"
-        ]
-    }
-    
-    # Exécution asynchrone
-    async def main():
-        result = await run_pedagogical_analysis(**test_data)
-        print("Résultat de l'analyse:")
-        print(result)
-    
-    asyncio.run(main())
+    prompt_template = ChatPromptTemplate.from_template(PROMPT_RECAPITULATIF)
+
+    chain = prompt_template | model | StrOutputParser()
+
+    return chain.invoke({"rapport": rapport})
+

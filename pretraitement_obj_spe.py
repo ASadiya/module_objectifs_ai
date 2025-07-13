@@ -72,37 +72,55 @@ def decouper_objectifs(texte):
 def nettoyer_objectifs_specifiques(objectif_general, objectifs_specifiques):
     logger.info("Nettoyage des objectifs spécifiques lancé.")
     
+    # Étape 1: Déterminer le préambule global à partir de l'objectif général et des objectifs spécifiques bruts.
     temps, capacite = extraire_preambules(objectif_general)
 
-    if isinstance(objectifs_specifiques, str):
-        nouveaux_temps, nouvelles_capacite = extraire_preambules(objectifs_specifiques)
-        temps = nouveaux_temps or temps
-        capacite = nouvelles_capacite or capacite
+    # Convertir les objectifs spécifiques en une seule chaîne de caractères si c'est une liste
+    texte_objectifs_bruts = " ".join(objectifs_specifiques) if isinstance(objectifs_specifiques, list) else objectifs_specifiques
 
-        preambule_pattern = re.escape(f"{temps}, {capacite}")
-        objectifs_sans_preambule = re.sub(preambule_pattern, "", objectifs_specifiques, count=1, flags=re.IGNORECASE)
-        objectifs_specifiques_liste = decouper_objectifs(objectifs_sans_preambule)
-    else:
-        objectifs_specifiques_liste = objectifs_specifiques
-        obj_spe_brut = " ".join(objectifs_specifiques_liste)
-        nouveaux_temps, nouvelles_capacite = extraire_preambules(obj_spe_brut)
-        temps = nouveaux_temps or temps
-        capacite = nouvelles_capacite or capacite
+    # Chercher un préambule dans le bloc d'objectifs spécifiques qui pourrait être plus pertinent
+    nouveaux_temps, nouvelles_capacite = extraire_preambules(texte_objectifs_bruts)
+    temps = nouveaux_temps or temps
+    capacite = nouvelles_capacite or capacite
 
-    logger.debug("Application des préambules manquants à chaque objectif.")
+    # Étape 2: Retirer le préambule global du bloc de texte pour éviter les répétitions.
+    objectifs_sans_preambule = texte_objectifs_bruts
+    
+    # On ne tente de retirer le préambule que si on en a trouvé un.
+    if temps or capacite:
+        pattern_parts = []
+        if temps:
+            pattern_parts.append(re.escape(temps))
+        if capacite:
+            pattern_parts.append(re.escape(capacite))
+        
+        # Crée un motif qui gère la virgule et les espaces entre les parties du préambule
+        preambule_pattern = r'\s*,?\s*'.join(pattern_parts)
+        
+        # On ancre le motif au début du texte pour ne supprimer que le vrai préambule
+        objectifs_sans_preambule = re.sub(f"^{preambule_pattern}", "", texte_objectifs_bruts, count=1, flags=re.IGNORECASE).strip()
+
+    # Étape 3: Découper le bloc de texte (maintenant sans préambule) en une liste d'objectifs.
+    objectifs_specifiques_liste = decouper_objectifs(objectifs_sans_preambule)
+
+    # Étape 4: Ajouter le préambule à chaque objectif individuel qui n'en a pas.
     objectifs_specifiques_nettoyes = []
-    for i, obj in enumerate(objectifs_specifiques_liste, 1):
+    for obj in objectifs_specifiques_liste:
         temps_obj, capacite_obj = extraire_preambules(obj)
-        original_obj = obj
-
-        if not capacite_obj:
+        
+        # On vérifie si le préambule global (temps, capacite) existe ET s'il n'est pas déjà dans l'objectif
+        if capacite and not capacite_obj:
             obj = f"{capacite} {obj}"
-        if not temps_obj:
-            obj = f"{temps}, {obj}"
+        
+        if temps and not temps_obj:
+            # On ajoute la virgule seulement si on vient d'ajouter la capacité
+            if capacite and not capacite_obj:
+                obj = f"{temps}, {obj}"
+            else:
+                obj = f"{temps} {obj}"
 
-        if obj != original_obj:
-            logger.info(f"Préambules ajoutés à l'objectif {i}.")
-
+        obj = obj.strip().capitalize()
+        logger.info("Nouvel objectif spécifique nettoyé : %s", obj)
         objectifs_specifiques_nettoyes.append(obj)
 
     logger.info("Nettoyage terminé. Objectifs spécifiques traités : %d", len(objectifs_specifiques_nettoyes))

@@ -1,7 +1,15 @@
 # streamlit_page_title: Analyse des objectifs
 
 import streamlit as st
-from features_api import assistant_pedagogique, recapitulatif
+
+st.set_page_config(
+    page_title="Analyse d'objectifs pédagogiques par IA", 
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
+
+
+from features3 import assistant_pedagogique, recapitulatif
 from pretraitement_obj_spe import nettoyer_objectifs_specifiques
 from generation_pdf import generer_pdf, llm_output_to_dict
 from style_loader import load_css
@@ -10,12 +18,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-st.set_page_config(
-    page_title="Analyse d'objectifs pédagogiques par IA", 
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
 
 # Chargement des styles CSS externes
 load_css('styles.css')
@@ -94,6 +96,7 @@ if soumis:
 
 
     # Récapitulatif
+    recap_dict = {}
     try:
         recap = recapitulatif(rapport['details'])
         logger.info("Récapitulatif fait !")
@@ -177,7 +180,7 @@ if soumis:
         </div>
         """, unsafe_allow_html=True)
     
-    if not(isinstance(recap_dict, dict)):
+    if not isinstance(recap_dict, dict):
         logger.warning("Le récapitulatif n'est pas un dictionnaire valide.")
         #st.stop()  
         
