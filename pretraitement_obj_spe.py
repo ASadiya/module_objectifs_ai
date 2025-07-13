@@ -70,10 +70,15 @@ def decouper_objectifs(texte):
 
 
 def nettoyer_objectifs_specifiques(objectif_general, objectifs_specifiques):
-    logger.info("Nettoyage des objectifs spécifiques lancé.")
+    logger.info("\n\nNettoyage des objectifs spécifiques lancé.")
     
     # Étape 1: Déterminer le préambule global à partir de l'objectif général et des objectifs spécifiques bruts.
-    temps, capacite = extraire_preambules(objectif_general)
+    if objectif_general :
+        logger.debug(f"Extraction du préambule de l'objectif général : {objectif_general}.")
+        temps, capacite = extraire_preambules(objectif_general)
+    else:
+        logger.debug("Aucun objectif général fourni, utilisation des préambules des objectifs spécifiques.")
+        #temps, capacite = None, None
 
     # Convertir les objectifs spécifiques en une seule chaîne de caractères si c'est une liste
     texte_objectifs_bruts = " ".join(objectifs_specifiques) if isinstance(objectifs_specifiques, list) else objectifs_specifiques

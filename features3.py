@@ -64,7 +64,7 @@ class ModelConfig:
     api_key: str
     model_name: str = "gemini-2.5-flash"
     temperature: float = 0.4
-    max_output_tokens: int = 2024
+    #max_output_tokens: int = 2024
 
 # État du graphe
 class AgentState(TypedDict):
@@ -107,7 +107,7 @@ class PedagogicalAgent:
         self.app = self.workflow.compile(
             checkpointer=MemorySaver(),
             interrupt_before=[],  # Pas d'interruption par défaut
-            debug=True
+            debug=False
         )
     
     def _create_model(self, api_key: str) -> ChatGoogleGenerativeAI:
@@ -116,7 +116,7 @@ class PedagogicalAgent:
             model="gemini-2.0-flash",
             google_api_key=api_key,
             temperature=0.4,
-            max_output_tokens=2024,
+            #max_output_tokens=2024,
             #callbacks=[langfuse_handler]
         )
     
@@ -527,7 +527,7 @@ def recapitulatif(rapport: str) -> str:
         model="gemini-2.0-flash",
         google_api_key=os.getenv("GEMINI_API_KEY_RECAP_SYNTHESE"),
         temperature=0.4,
-        max_output_tokens=2024,
+        #max_output_tokens=2024,
         #callbacks=[langfuse_handler]
     )
 
