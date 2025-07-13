@@ -67,81 +67,86 @@ Voici la taxonomie de Bloom et ses niveaux, du niveau inférieur au niveau supé
 
 # Template pour la classification selon Bloom
 PROMPT_CLASSIFICATION_BLOOM = """
-{base_connaissances}
+Instruction :
+    Tu es un expert en ingénierie pédagogique. Ta mission est de classer chaque objectif pédagogique fourni, général comme spécifique, selon les niveaux de la taxonomie de Bloom (connaître, comprendre, appliquer, analyser, évaluer, créer).
+
+    Il est ESSENTIEL que tu n'altères EN AUCUN CAS les formulations des objectifs soumis. Tu dois les analyser et les classifier STRICTEMENT tels qu'ils sont fournis, sans en retirer, ajouter ou modifier un seul mot, ni les reformuler, ni les corriger.
+    Toute altération, reformulation ou paraphrase des objectifs constitue une erreur grave d'exécution de la tâche. Tu dois copier et réutiliser l’objectif exactement tel qu’il t’a été transmis. Toute déviation sera considérée comme une faute.
+
+    Si un verbe peut correspondre à plusieurs niveaux de Bloom, utilise la DESCRIPTION COMPLETE DE L'OBJECTIF pour déterminer le bon niveau.  
+    Dans le cas d'un OBJECTIF GENERAL, prends aussi en compte les objectifs spécifiques associés pour affiner la classification.
+
+    Pour chaque objectif analysé, respecte IMPÉRATIVEMENT le format suivant :
+
+    Objectif (général ou spécifique X) : [l'objectif EXACTEMENT tel que fourni]
+    Niveau de Bloom : [niveau retenu]
+    Justification : [justification du choix du niveau]
 
 Objectif général : {objectif_general}
 
 Objectifs spécifiques :
 {objectifs_specifiques}
 
-Instruction : 
-    Tu es un expert en ingénierie pédagogique. Ta mission est de classer chaque objectif pédagogique fourni, général comme spécifique, selon les niveaux de la taxonomie de Bloom (connaître, comprendre, appliquer, analyser, évaluer, créer).
-
-    Si un verbe peut correspondre à plusieurs niveaux de Bloom, utilise la DESCRIPTION COMPLETE DE L'OBJECTIF pour déterminer le bon niveau.  
-    Dans le cas d'un OBJECTIF GENERAL, prends aussi en compte les objectifs spécifiques associés pour affiner la classification.
+{base_connaissances}
 """
 
 # Template pour l'évaluation des objectifs
 PROMPT_EVALUATION_OBJECTIFS = """
-Base de connaissances : {base_connaissances}
+Instruction :
+  Tu es un expert en ingénierie pédagogique. Pour chaque objectif, rappelle l'objectif, son niveau dans la taxonomie de Bloom, puis évalue l'objectif sur les critères de : spécificité, mesurabilité, cohérence, réalisme, temporalité, tels que définis dans la base de connaissances. 
+  
+  IMPORTANT : l'objectif général DOIT faire l'objet d'une évaluation au même titre que les objectifs spécifiques. Ne le néglige pas. Évalue-le en premier, en indiquant explicitement qu'il s'agit de l'objectif général.
+  
+  Au niveau de la cohérence, n'oublie pas de vérifier que chaque objectif est en adéquation avec le nom du cours. Signale toute incohérence.
+
+  À la fin de ton évaluation de chaque critère, attribue une note de 1 à 5 résultante de cette évaluation, et cela pour chaque objectif.
+
+  Utilise cette structure :
+    Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
+    - Niveau : [niveau de Bloom]
+    - Spécifique : [commentaire]. Note : [note/5]
+    - Mesurable : [commentaire]. Note : [note/5]
+    - Approprié (Cohérent) : [commentaire]. Note : [note/5]
+    - Réaliste : [commentaire]. Note : [note/5]
+    - Temporellement défini : [commentaire]. Note : [note/5]
+
+  Si tu ne possèdes pas assez d'informations pour évaluer un objectif sur un critère, dis : "Je ne peux pas évaluer cet objectif sur ce critère pour cause de manque d'informations sur..." et complète la phrase.
+
+  Après l'analyse de ces critères sur chaque objectif, tu évalues le critère de la Complétude sur l'ensemble des objectifs spécifiques, et tu lui attribues également une note.
+
+  À la fin, dans le résumé, inclus le récapitulatif des notes de chaque objectif sous cette forme :
+  - Objectif [numéro de l'objectif] : Spécifique ([note]/5), Mesurable ([note]/5), Approprié (Cohérent) ([note]/5), Réaliste ([note]/5), Temporellement défini ([note]/5).
+
+  Complétude ([note]/5)
 
 Nom du cours : {nom_cours}
 Niveau : {niveau}
 Public : {public}
 Classification bloom des objectifs : {bloom_classification}
 
-Instruction :
-  Pour chaque objectif, rappelle l'objectif, son niveau dans la taxonomie de bloom, puis évalue l'objectif sur les critères de : spécificité, mesurabilité, cohérence, réalisme, temporalité, tels que expliqués dans la base de connaissances. 
-  Au niveau de la cohérence, n'oublie pas de vérifier que l'objectif est en adéquation avec le nom du cours. Signale toute incohérence.
-  
-  A la fin de ton évaluation de chaque critère, attribue une note de 1 à 5 résultante de cette évaluation, et cela pour chaque objectif.
-  Fais-le sous cette forme :
-    Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
-    - Niveau : [niveau de Bloom]
-    - Spécifique : [Ton commentaire sur la spécificité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-    - Mesurable : [Ton commentaire sur la mesurabilité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-    - Approprié (Cohérent) : [Ton commentaire sur la cohérence de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-    - Réaliste : [Ton commentaire sur le réalisme de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-    - Temporellement défini : [Ton commentaire sur la temporalité de l'objectif]. Note : [La note que tu lui attribues pour ce critère]
-
-  Si tu ne possèdes pas assez d'informations pour évaluer un objectif sur un critère, dis "Je ne peux pas évaluer cet objectif sur ce critère pour cause de manque d'informations sur" et tu complètes ce sur quoi porte l'information manquante.
-
-  Après l'analyse de ces critères sur chaque objectif, tu évalues le critère de la Complétude sur l'ensemble des objectifs spécifiques, et tu lui attribues également une note.
-  
-  À la fin, dans le résumé, inclus le récapitulatif des notes de chaque objectif sous cette forme :
-  - Objectif [numéro de l'objectif] : Spécifique ([note]/5), Mesurable ([note]/5), Approprié (Cohérent) ([note]/5), Réaliste ([note]/5), Temporellement défini ([note]/5).
-
-  Complétude ([note]/5)
+Base de connaissances : {base_connaissances}
 """
 
 # Template pour l'auto-évaluation de l'évaluation
 PROMPT_AUTO_EVAL_EVALUATION = """
-Base de connaissances : {base_connaissances}
-
 Tu es un expert en pédagogie universitaire. Voici une évaluation automatique d'objectifs pédagogiques.
 
 Ta mission :
 1. Vérifie que cette évaluation (notamment les commentaires et les notes) est correcte, complète et cohérente, compte tenu des critères de spécificité, mesurabilité, cohérence, réalisme, définition de la temporalité spécifiés dans la base de connaissances.
 2. Améliore-la si besoin, mais garde EXACTEMENT le même format de sortie pour la version révisée (numérotation, paragraphes, tirets, structure, etc.).
-3. Si tout est bon, reformule légèrement pour plus de clarté, mais sans modifier la structure.
+3. Si tout est bon, renvoie tel quel.
 
 Evaluation à vérifier :
 {evaluation}
 
-# Version révisée dans le même format :
+Base de connaissances : {base_connaissances}
+
 """
 
 # Template pour les améliorations et recommandations
 PROMPT_AMELIORER_OBJECTIFS = """
-Base de connaissances : {base_connaissances}
-
-Nom du cours : {nom_cours}
-Niveau : {niveau}
-Public : {public}
-Evaluation des objectifs : {evaluation_objectifs}
-
 Instruction : 
-  Sur la base des évaluations des objectifs pédagogiques, fais pour chaque objectif, si le besoin est, des recommandations afin d'améliorer le plus possible ces objectifs.
+  Tu es un expert en ingiénerie pédagoique. Sur la base des évaluations des objectifs pédagogiques, fais pour chaque objectif, si le besoin est, des recommandations afin d'améliorer le plus possible ces objectifs.
   Au niveau de chaque objectif, l'analyse sera fournie sous cette forme :
   
   - Niveau : [niveau de Bloom]
@@ -162,48 +167,40 @@ Instruction :
   [Analyse de l'objectif général comme spécifiée plus haut]
     
   #### Objectifs spécifiques
-  
+  (Pour chaque objectif spécifique, tu procèdes de la même manière) :
   Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
   [Analyse de cet objectif spécifique comme spécifiée plus haut]
-  
-  
-  Objectif [numéro de l'objectif] : [l'objectif dans son entièreté].
-  **[Analyse de cet objectif spécifique comme spécifiée plus haut]**
-  
-  
-  Et ceci jusqu'à la fin des objectifs spécifiques.
+
   Après l'analyse de ces critères sur chaque objectif, tu évalues le critère de la Complétude sur l'ensemble des objectifs spécifiques, et tu lui attribues également une note.
   
   A la fin, fais un récapitulatif des notes pour chaque objectif (Objectif [numéro de l'objectif] : Spécifique ([note]/5), Mesurable ([note]/5), Approprié (Cohérent) ([note]/5), Réaliste ([note]/5), Temporellement défini ([note]/5)) inclus dans un résumé global de l'analyse pour conclure (ne pas oublier la complétude globale des objectifs spécifiques).
+
+Nom du cours : {nom_cours}
+Niveau : {niveau}
+Public : {public}
+Evaluation des objectifs : {evaluation_objectifs}
+
+Base de connaissances : {base_connaissances}
 """
 
 # Template pour l'auto-évaluation des suggestions
 PROMPT_AUTO_EVAL_SUGGESTIONS = """
-Base de connaissances : {base_connaissances}
-
 Tu es un expert en ingénierie pédagogique. Voici une évaluation d'objectifs pédagogiques accompagnée de suggestions générées automatiquement pour améliorer ces objectifs.
 
 Ta mission :
 1. Vérifie que chaque recommandation est claire, cohérente avec le cours et son niveau, bien alignée sur la taxonomie de Bloom (dont les niveaux sont : Connaître, Comprendre, Appliquer, Analyser, Évaluer, Créer) et contribue à obtenir un objectif respectant les critères de spécificité, mesurabilité, cohérence, réalisme, définition de la temporalité, expliqués dans la base de connaissances.  
-2. Corrige ou reformule les recommandations si nécessaire, tout en RESPECTANT LE MEME FORMAT de sortie dans la version révisée que dans celle d'origine (numérotation, paragraphes, tirets, structure etc.).
+2. Corrige ou reformule les recommandations (et UNIQUEMENT les recommandations ! Si ta recommandation consiste en une reformulation de l'objectif, tu le fais dans la section dédiée aux recommandations UNIQUEMENT) si nécessaire, tout en RESPECTANT LE MEME FORMAT de sortie dans la version révisée que dans celle d'origine (numérotation, paragraphes, tirets, structure etc.).
 
 Evaluation d'objectifs pédagogiques accompagnée de recommandations à évaluer :
 {suggestions}
 
-# Version révisée :
+Base de connaissances : {base_connaissances}
+
 """
 
 # Template pour la synthèse
 PROMPT_SYNTHESE = """
 Tu es un expert pédagogique chargé de résumer un rapport d'analyse des objectifs pédagogiques d'un cours.
-
-Voici les informations du cours :
-Cours : {nom_cours}
-Niveau : {niveau}
-Public cible : {public}
-
-Voici le rapport complet à analyser :
-{rapport}
 
 Ta tâche est de produire une synthèse claire, concise et structurée, destinée à un enseignant ou responsable pédagogique.
 
@@ -237,6 +234,14 @@ Les recommandations prioritaires portent sur la précision des échéanciers d'a
 ---
 
 Merci de produire uniquement la synthèse, sans autre ajout.
+
+Voici les informations du cours :
+Cours : {nom_cours}
+Niveau : {niveau}
+Public cible : {public}
+
+Voici le rapport complet à analyser :
+{rapport}
 """
 
 # Template pour le récapitulatif

@@ -13,10 +13,12 @@ from features3 import assistant_pedagogique, recapitulatif
 from pretraitement_obj_spe import nettoyer_objectifs_specifiques
 from generation_pdf import generer_pdf, llm_output_to_dict
 from style_loader import load_css
+from log_config import setup_logging
 import logging
 
+# Configurer le logging dès le début de l'application
+setup_logging()
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Chargement des styles CSS externes

@@ -469,18 +469,21 @@ class PedagogicalAgent:
         try:
             # Exécution asynchrone du workflow
             async for event in self.app.astream(initial_state, config=config):
-                if hasattr(st, 'info'):  # Si Streamlit est disponible
-                    for node_name, node_state in event.items():
-                        if node_name != "__end__":
-                            step_name = {
-                                "classify_bloom": "Classification selon Bloom",
-                                "evaluate_objectives": "Évaluation des objectifs",
-                                "auto_eval_evaluation": "Révision de l'évaluation",
-                                "generate_suggestions": "Génération de recommandations",
-                                "create_synthesis": "Création de la synthèse",
-                                "finalize_report": "Finalisation du rapport"
-                            }.get(node_name, node_name)
-                            
+                for node_name, node_state in event.items():
+                    if node_name != "__end__":
+                        step_name = {
+                            "classify_bloom": "Classification selon Bloom",
+                            "evaluate_objectives": "Évaluation des objectifs",
+                            "auto_eval_evaluation": "Révision de l'évaluation",
+                            "generate_suggestions": "Génération de recommandations",
+                            "create_synthesis": "Création de la synthèse",
+                            "finalize_report": "Finalisation du rapport"
+                        }.get(node_name, node_name)
+
+                        # Log the state for the current step
+                        logger.debug(f"Step: {step_name}, State: {node_state}")
+
+                        if hasattr(st, 'info'):  # Si Streamlit est disponible
                             st.info(f" {step_name}...")
             
             # Récupération du résultat final
